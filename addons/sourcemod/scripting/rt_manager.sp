@@ -25,11 +25,11 @@ new Handle:rtmanager_roundstart  = INVALID_HANDLE,
 // ====[ PLUGIN ]========================================================
 public Plugin:myinfo =
 {
-	name			= PLUGIN_NAME,
-	author			= "Root",
-	description		= "Manages round timer on bomb maps",
-	version			= PLUGIN_VERSION,
-	url				= "http://dodsplugins.com/"
+	name        = PLUGIN_NAME,
+	author      = "Root",
+	description = "Manages round timer on bomb maps",
+	version     = PLUGIN_VERSION,
+	url         = "http://dodsplugins.com/"
 }
 
 
@@ -62,7 +62,7 @@ public OnPluginStart()
  * --------------------------------------------------------------------------- */
 public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	// If custom round timer is specified, accept changes for entity
+	// If custom round time is specified, accept changes for entity
 	if (GetConVarInt(rtmanager_roundstart) > 0)
 	{
 		// Searches for an entity by classname
@@ -82,6 +82,7 @@ public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
  * --------------------------------------------------------------------------- */
 public Event_bomb_exploded(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	// Once again check if value is not zero
 	if (GetConVarInt(rtmanager_bombexplode) > 0)
 	{
 		new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
@@ -101,20 +102,19 @@ public Event_bomb_exploded(Handle:event, const String:name[], bool:dontBroadcast
  * --------------------------------------------------------------------------- */
 public Event_time_added(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (GetConVarInt(rtmanager_objexplode) > 0)
+	// Find entity
+	new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
+
+	// & check if entity is valid
+	if (roundTimer != -1)
 	{
-		new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
+		new Float:flTimeRemaining = GetTimeRemaining(roundTimer)
 
-		// Check if entity is valid
-		if (roundTimer != -1)
-		{
-			new Float:flTimeRemaining = GetTimeRemaining(roundTimer)
-
-			// Convert float to an integer
-			SetTimeRemaining(roundTimer, (RoundToZero(flTimeRemaining) + GetConVarInt(rtmanager_objexplode) - GetConVarInt(rtmanager_bombexplode) - 120))
-		}
-
-		// Draw custom 'minutes added' panel
-		SetEventInt(event, "seconds_added", GetConVarInt(rtmanager_objexplode))
+		// Convert float to an integer
+		// Other than than we should deduct timer when bomb is exploded and default 2 minutes
+		SetTimeRemaining(roundTimer, (RoundToZero(flTimeRemaining) + GetConVarInt(rtmanager_objexplode) - GetConVarInt(rtmanager_bombexplode) - 120))
 	}
+
+	// Draw custom 'minutes added' panel
+	SetEventInt(event, "seconds_added", GetConVarInt(rtmanager_objexplode))
 }
