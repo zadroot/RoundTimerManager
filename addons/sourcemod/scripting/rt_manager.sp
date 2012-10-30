@@ -8,21 +8,21 @@
 * Changelog & more info at http://goo.gl/4nKhJ
 */
 
-// ====[ INCLUDES ]======================================================
+// ====[ INCLUDES ]========================================================
 #include <sourcemod>
 #include <sdktools>
 #include <dodhooks>
 
-// ====[ CONSTANTS ]=====================================================
+// ====[ CONSTANTS ]=======================================================
 #define PLUGIN_NAME    "Round Timer Manager"
 #define PLUGIN_VERSION "1.0"
 
-// ====[ VARIABLES ]=====================================================
-new Handle:rtmanager_roundstart  = INVALID_HANDLE,
+// ====[ VARIABLES ]=======================================================
+new	Handle:rtmanager_roundstart  = INVALID_HANDLE,
 	Handle:rtmanager_bombexplode = INVALID_HANDLE,
 	Handle:rtmanager_objexplode  = INVALID_HANDLE
 
-// ====[ PLUGIN ]========================================================
+// ====[ PLUGIN ]==========================================================
 public Plugin:myinfo =
 {
 	name        = PLUGIN_NAME,
@@ -36,7 +36,7 @@ public Plugin:myinfo =
 /* OnPluginStart()
  *
  * When the plugin starts up.
- * --------------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------- */
 public OnPluginStart()
 {
 	// Create ConVars
@@ -59,7 +59,7 @@ public OnPluginStart()
 /* Event_round_starts()
  *
  * Called when a round starts.
- * --------------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------- */
 public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// If custom round time is specified, accept changes for entity
@@ -79,7 +79,7 @@ public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
 /* Event_bomb_exploded()
  *
  * Called when TNT explodes.
- * --------------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------- */
 public Event_bomb_exploded(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// Once again check if value is not zero
@@ -99,7 +99,7 @@ public Event_bomb_exploded(Handle:event, const String:name[], bool:dontBroadcast
 /* Event_time_added()
  *
  * Called when time is added (in bombing maps).
- * --------------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------- */
 public Event_time_added(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// Find entity
