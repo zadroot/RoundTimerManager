@@ -2,32 +2,31 @@
 * Round Timer Manager by Root
 *
 * Description:
-*   Manages round timer when game starts, TNT explodes or object is about to be destroyed.
+*   Manages round timer when game starts, TNT explodes or an object is about to be destroyed.
 *
 * Version 1.0
 * Changelog & more info at http://goo.gl/4nKhJ
 */
 
-// ====[ INCLUDES ]========================================================
-#include <sourcemod>
+// ====[ INCLUDES ]=======================================================
 #include <sdktools>
 #include <dodhooks>
 
-// ====[ CONSTANTS ]=======================================================
+// ====[ CONSTANTS ]======================================================
 #define PLUGIN_NAME    "Round Timer Manager"
 #define PLUGIN_VERSION "1.0"
 
-// ====[ VARIABLES ]=======================================================
+// ====[ VARIABLES ]======================================================
 new	Handle:rtmanager_roundstart  = INVALID_HANDLE,
 	Handle:rtmanager_bombexplode = INVALID_HANDLE,
 	Handle:rtmanager_objexplode  = INVALID_HANDLE
 
-// ====[ PLUGIN ]==========================================================
+// ====[ PLUGIN ]=========================================================
 public Plugin:myinfo =
 {
 	name        = PLUGIN_NAME,
 	author      = "Root",
-	description = "Manages round timer on bomb maps",
+	description = "Manages round timer on maps with round timer",
 	version     = PLUGIN_VERSION,
 	url         = "http://dodsplugins.com/"
 }
@@ -36,36 +35,34 @@ public Plugin:myinfo =
 /* OnPluginStart()
  *
  * When the plugin starts up.
- * ------------------------------------------------------------------------- */
+ * ----------------------------------------------------------------------- */
 public OnPluginStart()
 {
-	// Create ConVars
-	CreateConVar("rtmanager_version", PLUGIN_VERSION, PLUGIN_NAME, FCVAR_NOTIFY|FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED)
+	CreateConVar("rtmanager_version", PLUGIN_VERSION, PLUGIN_NAME, FCVAR_NOTIFY|FCVAR_DONTRECORD)
+
+	// Create console variables for configurations
 	rtmanager_roundstart  = CreateConVar("dod_roundtimer_start", "420", "Set the time remaining for a round (in seconds)",                           FCVAR_PLUGIN, true, 0.0)
 	rtmanager_bombexplode = CreateConVar("dod_roundtimer_bomb",  "30",  "Specified how many seconds add when TNT is just exploded",                  FCVAR_PLUGIN, true, 0.0)
 	rtmanager_objexplode  = CreateConVar("dod_roundtimer_score", "180", "How many seconds add when object is exploded/captured\nBomb time ignored!", FCVAR_PLUGIN, true, 0.0)
 
-	// Hook events
-	HookEvent("dod_round_start",   Event_round_start)
-	HookEvent("dod_bomb_exploded", Event_bomb_exploded)
+	// Hook events which deal with round timer
+	HookEvent("dod_round_start",      OnRoundStart,   EventHookMode_PostNoCopy)
+	HookEvent("dod_bomb_exploded",    OnBombExploded, EventHookMode_PostNoCopy)
+	HookEvent("dod_timer_time_added", OnTimeAdded,    EventHookMode_Pre)
 
-	// We're going to rewrite an event
-	HookEvent("dod_timer_time_added", Event_time_added, EventHookMode_Pre)
-
-	// Create and exec plugin configuration file
 	AutoExecConfig(true, "roundtimer_manager")
 }
 
-/* Event_round_starts()
+/* OnRoundStarts()
  *
  * Called when a round starts.
- * ------------------------------------------------------------------------- */
-public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
+ * ----------------------------------------------------------------------- */
+public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	// If custom round time is specified, accept changes for entity
-	if (GetConVarInt(rtmanager_roundstart) > 0)
+	// If custom round time is specified, accept changes for an entity
+	if (GetConVarInt(rtmanager_roundstart))
 	{
-		// Searches for an entity by classname
+		// Firstly lets search for round timer entity
 		new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
 
 		if (roundTimer != -1)
@@ -76,45 +73,38 @@ public Event_round_start(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-/* Event_bomb_exploded()
+/* OnBombExploded()
  *
  * Called when TNT explodes.
- * ------------------------------------------------------------------------- */
-public Event_bomb_exploded(Handle:event, const String:name[], bool:dontBroadcast)
+ * ----------------------------------------------------------------------- */
+public OnBombExploded(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	// Once again check if value is not zero
-	if (GetConVarInt(rtmanager_bombexplode) > 0)
+	// Once again check if value is specified
+	if (GetConVarInt(rtmanager_bombexplode))
 	{
 		new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
 
 		if (roundTimer != -1)
 		{
 			// Returns time remaining on the round timer specified
-			new Float:flTimeRemaining = GetTimeRemaining(roundTimer)
-			SetTimeRemaining(roundTimer, (RoundToZero(flTimeRemaining) + GetConVarInt(rtmanager_bombexplode)))
+			SetTimeRemaining(roundTimer, (RoundToZero(GetTimeRemaining(roundTimer)) + GetConVarInt(rtmanager_bombexplode)))
 		}
 	}
 }
 
-/* Event_time_added()
+/* OnTimeAdded()
  *
  * Called when time is added (in bombing maps).
- * ------------------------------------------------------------------------- */
-public Event_time_added(Handle:event, const String:name[], bool:dontBroadcast)
+ * ----------------------------------------------------------------------- */
+public OnTimeAdded(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	// Find entity
 	new roundTimer = FindEntityByClassname(-1, "dod_round_timer")
-
-	// & check if entity is valid
 	if (roundTimer != -1)
 	{
-		new Float:flTimeRemaining = GetTimeRemaining(roundTimer)
+		// Convert float to an integer, and other than than we should deduct timer when bomb is exploded + default time added
+		SetTimeRemaining(roundTimer, (RoundToZero(GetTimeRemaining(roundTimer)) + GetConVarInt(rtmanager_objexplode) - GetConVarInt(rtmanager_bombexplode) - 120))
 
-		// Convert float to an integer
-		// Other than than we should deduct timer when bomb is exploded and default 2 minutes
-		SetTimeRemaining(roundTimer, (RoundToZero(flTimeRemaining) + GetConVarInt(rtmanager_objexplode) - GetConVarInt(rtmanager_bombexplode) - 120))
+		// Draw own 'minutes added' element
+		SetEventInt(event, "seconds_added", GetConVarInt(rtmanager_objexplode))
 	}
-
-	// Draw custom 'minutes added' panel
-	SetEventInt(event, "seconds_added", GetConVarInt(rtmanager_objexplode))
 }
